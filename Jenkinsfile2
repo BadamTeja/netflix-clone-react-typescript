@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "netflix-clone:${BUILD_NUMBER}"
-        DOCKER_REPO  = "YOUR_DOCKERHUB_USERNAME/netflix-clone"
+        DOCKER_REPO  = "badamteja/netflix-clone"
     }
 
     stages {
