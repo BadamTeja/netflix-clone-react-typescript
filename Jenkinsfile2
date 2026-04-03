@@ -57,6 +57,15 @@ pipeline {
             }
         }
 
+stage('Upload to Nexus') {
+    steps {
+        sh '''
+        curl -v -u admin:password \
+        --upload-file target/myapp.jar \
+        http://3.6.87.154:8081/repository/raw-hosted/myapp.jar
+        '''
+    }
+}
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t $DOCKER_IMAGE .'
