@@ -59,13 +59,21 @@ pipeline {
 
 stage('Upload to Nexus') {
     steps {
-        sh '''
-        cd dist
-        zip -r app.zip .
-        curl -v -u admin:password \
-        --upload-file app.zip \
-        http://3.6.87.154:8081/repository/raw-hosted/app.zip
-        '''
+        withCredentials([usernamePassword(
+            credentialsId: 'nexus-creds',
+            usernameVariable: 'NEXUS_USER',
+            passwordVariable: 'NEXUS_PASS'
+        )]) {
+            sh '''
+            echo "Zipping build..."
+            zip -r dist/app.zip dist
+
+            echo "Uploading to Nexus..."
+            curl -v -u $NEXUS_USER:$NEXUS_PASS \
+            --upload-file dist/app.zip \
+            http://3.6.87.154:8081/repository/raw-hosted/app.zip
+            '''
+        }
     }
 }
         stage('Build Docker Image') {
