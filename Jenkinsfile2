@@ -2,30 +2,25 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs'   // Make sure NodeJS is configured in Jenkins
+        nodejs 'nodejs'   // make sure this exists in Jenkins
     }
 
     environment {
         DOCKER_IMAGE = "netflix-clone:${BUILD_NUMBER}"
-        CONTAINER_NAME = "netflix-container"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main',
-                credentialsId: 'git-creds',
-                url: 'https://github.com/BadamTeja/netflix-clone-react-typescript.git'
+                git credentialsId: 'git-creds', url: 'https://github.com/BadamTeja/netflix-clone-react-typescript.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                npm install -g yarn
-                yarn install
-                '''
+                sh 'npm install -g yarn'
+                sh 'yarn install'
             }
         }
 
@@ -37,75 +32,45 @@ pipeline {
 
         stage('Test') {
             steps {
-                echo "No tests available"
+                echo 'No tests available'
             }
         }
 
-        // ✅ FIXED SONAR STAGE
-       stage('SonarQube Analysis') {
-  stage('SonarQube Analysis') {
-    steps {
-        script {
-            def scannerHome = tool 'sonar-scanner'
-            withSonarQubeEnv('sonar-server') {
-                sh """
-                ${scannerHome}/bin/sonar-scanner \
-                -Dsonar.projectKey=netflix-clone \
-                -Dsonar.sources=src
-                """
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonar-server') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=netflix-clone \
+                        -Dsonar.sources=src
+                        """
+                    }
+                }
             }
         }
-    }
-}
 
-        // ✅ VERIFY BUILD OUTPUT
         stage('Verify Build Output') {
             steps {
                 sh 'ls -la dist'
             }
         }
 
-        // ✅ DOCKER BUILD
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t $DOCKER_IMAGE .'
             }
         }
 
-        // ✅ PUSH TO DOCKERHUB
-        stage('Push to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker tag $DOCKER_IMAGE $DOCKER_USER/$DOCKER_IMAGE
-                    docker push $DOCKER_USER/$DOCKER_IMAGE
-                    '''
-                }
-            }
-        }
-
-        // ✅ KUBERNETES DEPLOY
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                '''
-            }
-        }
     }
 
     post {
         success {
-            echo "✅ Pipeline Success"
+            echo '✅ Pipeline Successful'
         }
         failure {
-            echo "❌ Pipeline Failed"
+            echo '❌ Pipeline Failed'
         }
     }
 }
