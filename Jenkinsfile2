@@ -42,20 +42,21 @@ pipeline {
         }
 
         // ✅ FIXED SONAR STAGE
-        stage('SonarQube Analysis') {
-            steps {
-                script {
-                    def scannerHome = tool 'sonar-server'
-                    withSonarQubeEnv('sonar-server') {
-                        sh """
-                        ${scannerHome}/bin/sonar-server \
-                        -Dsonar.projectKey=netflix-clone \
-                        -Dsonar.sources=src
-                        """
-                    }
-                }
+       stage('SonarQube Analysis') {
+  stage('SonarQube Analysis') {
+    steps {
+        script {
+            def scannerHome = tool 'sonar-scanner'
+            withSonarQubeEnv('sonar-server') {
+                sh """
+                ${scannerHome}/bin/sonar-scanner \
+                -Dsonar.projectKey=netflix-clone \
+                -Dsonar.sources=src
+                """
             }
         }
+    }
+}
 
         // ✅ VERIFY BUILD OUTPUT
         stage('Verify Build Output') {
