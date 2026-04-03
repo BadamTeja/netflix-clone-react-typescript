@@ -45,10 +45,10 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'sonar-scanner'
+                    def scannerHome = tool 'sonar-server'
                     withSonarQubeEnv('sonar-server') {
                         sh """
-                        ${scannerHome}/bin/sonar-scanner \
+                        ${scannerHome}/bin/sonar-server \
                         -Dsonar.projectKey=netflix-clone \
                         -Dsonar.sources=src
                         """
