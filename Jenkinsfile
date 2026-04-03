@@ -4,11 +4,10 @@ pipeline {
     environment {
         GIT_REPO = "https://github.com/BadamTeja/netflix-clone-react-typescript.git"
         DOCKER_IMAGE = "badamteja/netflix-clone"
-        SONARQUBE_ENV = "sonar-scanner"
+        SONARQUBE_ENV = "sonar-server"
 
         // Nexus
-        NEXUS_URL = "http://3.6.87.154/:8081/repository/devops-artifacts/"
-        NEXUS_CREDENTIALS = "nexus-creds"
+        NEXUS_URL = "http://3.6.87.154:8081/repository/devops-artifacts/"
     }
 
     tools {
@@ -19,25 +18,32 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-              checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'git-creds', url: 'https://github.com/BadamTeja/netflix-clone-react-typescript.git']])
+                checkout scmGit(
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        credentialsId: 'git-creds',
+                        url: "${GIT_REPO}"
+                    ]]
+                )
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                sh 'npm install -g yarn'
+                sh 'yarn install'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'npm run build'
+                sh 'yarn build'
             }
         }
 
         stage('Test') {
             steps {
-                sh 'npm test -- --watchAll=false || true'
+                sh 'yarn test || true'
             }
         }
 
@@ -48,33 +54,44 @@ pipeline {
                     npm install -g sonar-scanner
                     sonar-scanner \
                       -Dsonar.projectKey=netflix-clone \
-                      -Dsonar.sources=. \
-                      -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.login=$SONAR_AUTH_TOKEN
+                      -Dsonar.sources=src
                     '''
                 }
             }
         }
 
-        // 🔥 THIS IS WHERE NEXUS COMES (NO pom.xml needed)
+        // ✅ FIXED (dist instead of build + credentials added)
         stage('Upload Artifact to Nexus') {
             steps {
-                script {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-creds',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
                     sh '''
-                    tar -czf build-${BUILD_NUMBER}.tar.gz build/
+                    tar -czf dist-${BUILD_NUMBER}.tar.gz dist/
 
                     curl -v -u $NEXUS_USER:$NEXUS_PASS \
-                    --upload-file build-${BUILD_NUMBER}.tar.gz \
-                    ${NEXUS_URL}build-${BUILD_NUMBER}.tar.gz
+                    --upload-file dist-${BUILD_NUMBER}.tar.gz \
+                    ${NEXUS_URL}dist-${BUILD_NUMBER}.tar.gz
                     '''
                 }
             }
         }
 
+        // ✅ FIXED (API KEY support)
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                withCredentials([string(
+                    credentialsId: 'tmdb-api-key',
+                    variable: 'TMDB_KEY'
+                )]) {
+                    script {
+                        docker.build(
+                            "${DOCKER_IMAGE}:${BUILD_NUMBER}",
+                            "--build-arg TMDB_V3_API_KEY=${TMDB_KEY} ."
+                        )
+                    }
                 }
             }
         }
