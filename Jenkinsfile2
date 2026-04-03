@@ -13,7 +13,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'git-creds', url: 'https://github.com/BadamTeja/netflix-clone-react-typescript.git'
+               checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'git-creds', url: 'https://github.com/BadamTeja/netflix-clone-react-typescript.git']])
             }
         }
 
