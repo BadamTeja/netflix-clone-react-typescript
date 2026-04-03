@@ -117,10 +117,11 @@ pipeline {
                     sh '''
                     echo "Updating deployment image..."
 
-                    sed -i "s|IMAGE_PLACEHOLDER|$DOCKER_REPO:$BUILD_NUMBER|g" k8s/deployment.yaml
+                    sed -i "s|IMAGE_PLACEHOLDER|$DOCKER_REPO:$BUILD_NUMBER|g" k8s/deployment.yml
 
                     echo "Deploying to Kubernetes..."
-                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/deployment.yml
+                    kubectl apply -f k8s/service.yml
                     '''
                 }
             }
