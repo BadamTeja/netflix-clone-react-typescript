@@ -7,7 +7,7 @@ pipeline {
         SONARQUBE_ENV = "sonar-server"
 
         // Nexus
-        NEXUS_URL = "http://3.6.87.154:8081/repository/devops-artifacts/"
+        NEXUS_URL = "http://15.207.112.236:8081/repository/devops-artifacts/"
     }
 
     tools {
