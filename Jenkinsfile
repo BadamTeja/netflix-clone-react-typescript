@@ -3,7 +3,8 @@ pipeline {
 
     environment {
         GIT_REPO = "https://github.com/BadamTeja/netflix-clone-react-typescript.git"
-        DOCKER_IMAGE = "badamteja/netflix-clone"
+        DOCKER_IMAGE = "netflix-clone:${BUILD_NUMBER}"
+        DOCKER_REPO  = "badamteja/netflix-clone"
         SONARQUBE_ENV = "sonar-server"
 
         // Nexus
