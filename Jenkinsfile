@@ -81,11 +81,14 @@ pipeline {
         }
 
         // ✅ FIXED (API KEY support)
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t $DOCKER_REPO:$BUILD_NUMBER .'
-            }
-        }
+      stage('Build Docker Image') {
+    steps {
+        sh '''
+        docker build -t $DOCKER_REPO:$BUILD_NUMBER .
+        docker tag $DOCKER_REPO:$BUILD_NUMBER $DOCKER_REPO:latest
+        '''
+    }
+}
 
      stage('Push to Docker Hub') {
     steps {
