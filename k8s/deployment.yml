@@ -15,5 +15,6 @@ spec:
       containers:
       - name: netflix
         image: badamteja/netflix-clone:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
