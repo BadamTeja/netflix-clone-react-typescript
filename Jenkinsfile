@@ -61,7 +61,7 @@ pipeline {
         }
 
         // ✅ FIXED (dist instead of build + credentials added)
-        stage('Upload Artifact to Nexus') {
+       stage('Upload to Nexus') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'nexus-creds',
@@ -69,11 +69,11 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                    tar -czf dist-${BUILD_NUMBER}.tar.gz dist/
+                    zip -r dist/app.zip dist
 
                     curl -v -u $NEXUS_USER:$NEXUS_PASS \
-                    --upload-file dist-${BUILD_NUMBER}.tar.gz \
-                    ${NEXUS_URL}dist-${BUILD_NUMBER}.tar.gz
+                    --upload-file dist/app.zip \
+                    http://15.207.112.236:8081/repository/raw-hosted/app.zip
                     '''
                 }
             }
