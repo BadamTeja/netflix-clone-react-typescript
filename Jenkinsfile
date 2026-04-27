@@ -102,24 +102,29 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    docker.withRegistry('', 'docker-creds') {
-                        docker.image("${DOCKER_IMAGE}:${BUILD_NUMBER}").push()
-                    }
+                withCredentials([
+                    file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG'),
+                    usernamePassword(
+                        credentialsId: 'docker-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                    echo "Updating deployment image..."
+
+                    sed -i "s|IMAGE_PLACEHOLDER|$DOCKER_REPO:$BUILD_NUMBER|g" k8s/deployment.yml
+
+                    echo "Deploying to Kubernetes..."
+                    kubectl apply -f k8s/deployment.yml
+                    kubectl apply -f k8s/service.yml
+                    '''
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/deployment.yaml
-                kubectl apply -f k8s/
-                '''
-            }
-        }
     }
 
     post {
