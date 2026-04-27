@@ -82,16 +82,22 @@ pipeline {
         // ✅ FIXED (API KEY support)
         stage('Build Docker Image') {
             steps {
-                withCredentials([string(
-                    credentialsId: 'tmdb-api-key',
-                    variable: 'TMDB_KEY'
+                sh 'docker build -t $DOCKER_REPO:$BUILD_NUMBER .'
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    script {
-                        docker.build(
-                            "${DOCKER_IMAGE}:${BUILD_NUMBER}",
-                            "--build-arg TMDB_V3_API_KEY=${TMDB_KEY} ."
-                        )
-                    }
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+
+                    docker push $DOCKER_REPO:$BUILD_NUMBER
+                    '''
                 }
             }
         }
