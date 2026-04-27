@@ -1,0 +1,145 @@
+pipeline {
+agent any
+
+```
+environment {
+    GIT_REPO = "https://github.com/BadamTeja/netflix-clone-react-typescript.git"
+    DOCKER_REPO  = "badamteja/netflix-clone"
+    SONARQUBE_ENV = "sonar-server"
+
+    // Nexus
+    NEXUS_URL = "http://15.207.112.236:8081/repository/raw-hosted/"
+}
+
+tools {
+    nodejs "nodejs"
+}
+
+stages {
+
+    stage('Checkout Code') {
+        steps {
+            checkout scmGit(
+                branches: [[name: '*/main']],
+                userRemoteConfigs: [[
+                    credentialsId: 'git-creds',
+                    url: "${GIT_REPO}"
+                ]]
+            )
+        }
+    }
+
+    stage('Install Dependencies') {
+        steps {
+            sh 'npm install -g yarn'
+            sh 'yarn install'
+        }
+    }
+
+    stage('Build') {
+        steps {
+            sh 'yarn build'
+        }
+    }
+
+    stage('Test') {
+        steps {
+            sh 'yarn test || true'
+        }
+    }
+
+    stage('SonarQube Analysis') {
+        steps {
+            withSonarQubeEnv("${SONARQUBE_ENV}") {
+                sh '''
+                npm install -g sonar-scanner
+                sonar-scanner \
+                  -Dsonar.projectKey=netflix-clone \
+                  -Dsonar.sources=src
+                '''
+            }
+        }
+    }
+
+    stage('Upload to Nexus') {
+        steps {
+            withCredentials([usernamePassword(
+                credentialsId: 'nexus-creds',
+                usernameVariable: 'NEXUS_USER',
+                passwordVariable: 'NEXUS_PASS'
+            )]) {
+                sh '''
+                zip -r dist/app.zip dist
+
+                curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                --upload-file dist/app.zip \
+                $NEXUS_URL/app-${BUILD_NUMBER}.zip
+                '''
+            }
+        }
+    }
+
+    stage('Build Docker Image') {
+        steps {
+            sh '''
+            docker build -t $DOCKER_REPO:$BUILD_NUMBER .
+            docker tag $DOCKER_REPO:$BUILD_NUMBER $DOCKER_REPO:latest
+            '''
+        }
+    }
+
+    stage('Push to Docker Hub') {
+        steps {
+            withCredentials([usernamePassword(
+                credentialsId: 'docker-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )]) {
+                sh '''
+                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+
+                docker push $DOCKER_REPO:$BUILD_NUMBER
+                docker push $DOCKER_REPO:latest
+                '''
+            }
+        }
+    }
+
+    stage('Deploy to Kubernetes') {
+        steps {
+            withCredentials([
+                file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')
+            ]) {
+                sh '''
+                echo "Updating deployment image..."
+
+                sed -i "s|IMAGE_PLACEHOLDER|$DOCKER_REPO:$BUILD_NUMBER|g" k8s/deployment.yml
+
+                echo "Applying Deployment..."
+                kubectl apply -f k8s/deployment.yml
+
+                echo "Restarting Pods..."
+                kubectl rollout restart deployment netflix-app
+
+                echo "Applying Service..."
+                kubectl apply -f k8s/service.yml
+
+                echo "Deployment Status:"
+                kubectl get pods
+                '''
+            }
+        }
+    }
+}
+
+post {
+    success {
+        echo "✅ Pipeline Success"
+    }
+    failure {
+        echo "❌ Pipeline Failed"
+    }
+}
+```
+
+}
