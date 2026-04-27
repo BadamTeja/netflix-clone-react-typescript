@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: netflix-service
 spec:
-  type: NodePort
+  type: loadbalancer
   selector:
     app: netflix
   ports:
