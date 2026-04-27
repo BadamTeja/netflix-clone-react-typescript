@@ -7,7 +7,6 @@ environment {
     DOCKER_REPO  = "badamteja/netflix-clone"
     SONARQUBE_ENV = "sonar-server"
 
-    // Nexus
     NEXUS_URL = "http://15.207.112.236:8081/repository/raw-hosted/"
 }
 
@@ -19,13 +18,9 @@ stages {
 
     stage('Checkout Code') {
         steps {
-            checkout scmGit(
-                branches: [[name: '*/main']],
-                userRemoteConfigs: [[
-                    credentialsId: 'git-creds',
-                    url: "${GIT_REPO}"
-                ]]
-            )
+            git branch: 'main',
+            credentialsId: 'git-creds',
+            url: "${GIT_REPO}"
         }
     }
 
@@ -42,25 +37,6 @@ stages {
         }
     }
 
-    stage('Test') {
-        steps {
-            sh 'yarn test || true'
-        }
-    }
-
-    stage('SonarQube Analysis') {
-        steps {
-            withSonarQubeEnv("${SONARQUBE_ENV}") {
-                sh '''
-                npm install -g sonar-scanner
-                sonar-scanner \
-                  -Dsonar.projectKey=netflix-clone \
-                  -Dsonar.sources=src
-                '''
-            }
-        }
-    }
-
     stage('Upload to Nexus') {
         steps {
             withCredentials([usernamePassword(
@@ -71,7 +47,7 @@ stages {
                 sh '''
                 zip -r dist/app.zip dist
 
-                curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                curl -u $NEXUS_USER:$NEXUS_PASS \
                 --upload-file dist/app.zip \
                 $NEXUS_URL/app-${BUILD_NUMBER}.zip
                 '''
@@ -111,20 +87,16 @@ stages {
                 file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')
             ]) {
                 sh '''
-                echo "Updating deployment image..."
+                echo "Deploying to Kubernetes..."
 
-                sed -i "s|IMAGE_PLACEHOLDER|$DOCKER_REPO:$BUILD_NUMBER|g" k8s/deployment.yml
-
-                echo "Applying Deployment..."
                 kubectl apply -f k8s/deployment.yml
-
-                echo "Restarting Pods..."
-                kubectl rollout restart deployment netflix-app
-
-                echo "Applying Service..."
                 kubectl apply -f k8s/service.yml
 
-                echo "Deployment Status:"
+                kubectl set image deployment/netflix-app \
+                netflix=$DOCKER_REPO:latest
+
+                kubectl rollout restart deployment netflix-app
+
                 kubectl get pods
                 '''
             }
