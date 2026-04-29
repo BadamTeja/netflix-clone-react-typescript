@@ -8,7 +8,7 @@ pipeline {
         SONARQUBE_ENV = "sonar-server"
 
         // Nexus
-        NEXUS_URL = "http://0.0.0.0:8081/repository/devops-artifacts/"
+        NEXUS_URL = "http://13.201.131.47:8081/repository/devops-artifacts/"
     }
 
     tools {
@@ -74,7 +74,7 @@ pipeline {
 
                     curl -v -u $NEXUS_USER:$NEXUS_PASS \
                     --upload-file dist/app.zip \
-                    http://0.0.0.0:8081/repository/raw-hosted/app.zip
+                    http://13.201.131.47:8081/repository/raw-hosted/app.zip
                     '''
                 }
             }
